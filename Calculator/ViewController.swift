@@ -14,6 +14,8 @@ class ViewController: UIViewController {
     
     var userIsTyping = false
     
+    var brain = CalculatorBrain()
+    
     @IBAction func appendDigit(sender: UIButton) {
         let digit = sender.currentTitle!
         if userIsTyping {
@@ -26,21 +28,30 @@ class ViewController: UIViewController {
         }
     }
     
-    var operandStack = Array<Double>()
     
     @IBAction func enter() {
         userIsTyping = false
-        operandStack.append(displayValue)
-        print("operandStack= \(operandStack)")
+        
+        if let result = brain.pushOperand(displayValue!) {
+            displayValue = result
+        } else {
+            displayValue = nil
+        }
     }
     
-    var displayValue: Double {
+    var displayValue: Double? {
         get {
-            return  NSNumberFormatter().numberFromString(display.text!)!.doubleValue
+            return  NSNumberFormatter().numberFromString(display.text!)?.doubleValue
         }
         set {
-            display.text="\(newValue)"
+            if let strValue = newValue {
+                display.text = "\(strValue)"
+            }
+            else {
+                display.text = ""
+            }
             userIsTyping = false
+            inputHistory.text = brain.descript + "="
         }
     }
 
@@ -55,43 +66,51 @@ class ViewController: UIViewController {
     
     
     @IBAction func operate(sender: UIButton) {
-        let operation = sender.currentTitle!
-            inputHistory.text = inputHistory.text! + operation
-        switch operation {
-            case "×": performOperation {$0 * $1}
-            case "÷": performOperation {$1 / $0}
-            case "+": performOperation {$0 + $1}
-            case "−": performOperation {$1 - $0}
-            case "√": performOperation1 {sqrt($0)}
-            case "π": operandStack.append(M_PI)
-            case "sin": performOperation1 {sin((($0)*M_PI)/180.0)}
-            case "cos": performOperation1 {cos((($0)*M_PI)/180.0)}
-            default: break
-        }
-    }
-    
-    func performOperation(operation: (Double, Double) -> Double) {
-        if operandStack.count >= 2 {
-            displayValue = operation(operandStack.removeLast(),operandStack.removeLast())
+        if userIsTyping {
             enter()
         }
+        
+        if let operation = sender.currentTitle {
+            if let result = brain.performOperation(operation) {
+                displayValue = result
+            } else {
+                displayValue = nil
+            }
+            
+        }
+        
     }
     
-    func performOperation1(operation: Double -> Double) {
-        if operandStack.count >= 1 {
-            displayValue = operation(operandStack.removeLast())
+    @IBAction func Mbutton(sender: UIButton) {
+        if userIsTyping {
             enter()
         }
+        if let result = brain.pushOperand("M") {
+            displayValue = result
+        } else {
+            displayValue = nil
+        }
+        userIsTyping = false
     }
-    
 
+    @IBAction func toMbutton(sender: UIButton) {
+        brain.variableValues["M"] = displayValue
+        if let result = brain.evaluate() {
+            displayValue = result
+        } else {
+            displayValue = nil
+        }
+
+        
+    }
     @IBOutlet weak var inputHistory: UILabel!
     
     @IBAction func Clear() {
-        operandStack.removeAll()
+        brain.clearStack()
         display.text = "0"
         inputHistory.text=""
         userIsTyping = false
+        brain.variableValues.removeValueForKey("M")
     }
     
 }
